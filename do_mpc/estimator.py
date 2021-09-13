@@ -91,7 +91,14 @@ class EKF(Estimator):
         retrieve the estimated state."""
         assert self.flags['setup'] == True, 'EKF was not setup yet. Please call EKF.setup().'
         None
-
+    
+    def prediction():
+        
+        
+    def correction():
+        
+    def constraint_handling():
+    
 class MHE(do_mpc.optimizer.Optimizer, Estimator):
     """Moving horizon estimator.
 
