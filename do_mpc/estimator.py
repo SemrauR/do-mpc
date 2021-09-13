@@ -78,26 +78,64 @@ class EKF(Estimator):
         Not currently implemented.
     """
     def __init__(self, model):
-        raise Exception('EKF is not currently supported. This is a placeholder.')
         super().__init__(model)
-
         # Flags are checked when calling .setup.
         self.flags = {
             'setup': False,
         }
+        
+        # Initialize structure to hold the optimial solution and initial guess:
+        self._opt_x_num = None
+        # Initialize structure to hold the parameters for the optimization problem:
+        self._opt_p_num = None
+        
+        self.data_fields = [""]
+        self.prediction_type = "simple" # simple | 
+        self.correction_type = "simple" # simple | 
+        self.constraint_handling_type = "none" # none | simple | QP | NLP
+        
+        
+        # Create seperate structs for the estimated and the set parameters (the union of both are all parameters of the model.)
+        _p = model._p
+        self._p_est  = self.model.sv.sym_struct(
+            [entry('default', shape=(0,0))]+
+            [entry(p_i, shape=_p[p_i].shape) for p_i in _p.keys() if p_i in p_est_list]
+        )
+        self._p_set  = self.model.sv.sym_struct(
+            [entry(p_i, shape=_p[p_i].shape) for p_i in _p.keys() if p_i not in p_est_list]
+        )        
+        
+        self._R = None
+        self._Q = None
+        self._P = None
+        
 
     def make_step(self, y0):
         """Main method during runtime. Pass the most recent measurement and
         retrieve the estimated state."""
         assert self.flags['setup'] == True, 'EKF was not setup yet. Please call EKF.setup().'
         None
+        
     
-    def prediction():
+    def _setup_prediction_function(self):
+        return 
+    
+    
+    def _setup_correction_function(self):
+        return
+    
+    
+    def _setup_constraint_handling_function(self):
+        return
+    
+    
+    def setup():
+        self._setup_prediction_function()
+        self._setup_correction_function()
+        self._setup_constraint_handling_function()
         
+        return
         
-    def correction():
-        
-    def constraint_handling():
     
 class MHE(do_mpc.optimizer.Optimizer, Estimator):
     """Moving horizon estimator.

@@ -1208,7 +1208,7 @@ class Model:
                                             [k for k in v_in_aux.keys()], 
                                             [k for k in v_in_aux.keys()])
         
-        v_in_meas = {"_x":_x, "_u":_u, "_z":_z, "_tvp":_tvp, "_p": _p, "_v":_v}
+        v_in_meas = {"_x":_x, "_u":_u, "_z":_z, "_tvp":_tvp, "_p": _p, "_v": _v}
         self._meas_fun = Function('meas_fun',
                                   [v for v in v_in_meas.values()], 
                                   [self._y_expression],
@@ -1218,7 +1218,7 @@ class Model:
                                  [v for v in v_in_meas.values()], 
                                  [jacobian(self._y_expression, v) for v in v_in_meas.values()],
                                  [k for k in v_in_meas.keys()], 
-                                 [k for k in v_in_meas.keys()])    
+                                 [k for k in v_in_meas.keys()])
         
 
         # Create and store some information about the model regarding number of variables for
