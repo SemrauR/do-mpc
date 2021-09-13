@@ -1171,29 +1171,54 @@ class Model:
         self._y = _y
         self._aux = _aux
 
-        # Declare functions for the right hand side and the aux_expressions.
+        # Declare functions for the right hand side and the aux_expressions and their jacobians
         v_in_rhs = {"_x":_x, "_u":_u, "_z":_z, "_tvp":_tvp, "_p": _p, "_w":_w}
         self._rhs_fun = Function('rhs_fun',
-                                 [v for v in v_in_rhs.values()], [self._rhs],
-                                 [k for k in v_in_rhs.keys()], ["_rhs"])
+                                 [v for v in v_in_rhs.values()], 
+                                 [self._rhs],
+                                 [k for k in v_in_rhs.keys()], 
+                                 ["_rhs"])
         self._rhs_jac_fun = Function('rhs_jac_fun',
-                                 [v for v in v_in_rhs.values()], [jacobian(self._rhs, v) for v in v_in_rhs.values()],
-                                 [k for k in v_in_rhs.keys()], [k for k in v_in_rhs.keys()])
+                                 [v for v in v_in_rhs.values()], 
+                                 [jacobian(self._rhs, v) for v in v_in_rhs.values()],
+                                 [k for k in v_in_rhs.keys()], 
+                                 [k for k in v_in_rhs.keys()])
         
+        v_in_alg = {"_x":_x, "_u":_u, "_z":_z, "_tvp":_tvp, "_p": _p, "_w":_w}
         self._alg_fun = Function('alg_fun',
-                                 [_x, _u, _z, _tvp, _p, _w], [self._alg],
-                                 ["_x", "_u", "_z", "_tvp", "_p", "_w"], ["_alg"])
-        self._aux_expression_fun = Function('aux_expression_fun',
-                                            [_x, _u, _z, _tvp, _p], [self._aux_expression],
-                                            ["_x", "_u", "_z", "_tvp", "_p"], ["_aux_expression"])
+                                 [v for v in v_in_alg.values()], 
+                                 [self._alg],
+                                 [k for k in v_in_alg.keys()], 
+                                 ["_alg"])
+        self._alg_jac_fun = Function("alg_jac_fun",
+                                     [v for v in v_in_alg.values()], 
+                                     [jacobian(self._alg, v) for v in v_in_alg.values()],
+                                     [k for k in v_in_alg.keys()], 
+                                     [k for k in v_in_alg.keys()])
         
-        v_in_meas = {"_x":_x, "_u":_u, "_z":_z, "_tvp":_tvp, "_p": _p, "_w":_w}
+        v_in_aux = {"_x": _x, "_u":_u, "_z":_z, "_tvp":_tvp, "_p": _p}
+        self._aux_expression_fun = Function('aux_expression_fun',
+                                            [v for v in v_in_aux.values()], 
+                                            [self._aux_expression],
+                                            [k for k in v_in_aux.keys()], 
+                                            ["_aux_expression"])
+        self._aux_expression_jac_fun = Function('aux_expression_jac_fun',
+                                            [v for v in v_in_aux.values()], 
+                                            [jacobian(self._aux_expression, v) for v in v_in_aux.values()],
+                                            [k for k in v_in_aux.keys()], 
+                                            [k for k in v_in_aux.keys()])
+        
+        v_in_meas = {"_x":_x, "_u":_u, "_z":_z, "_tvp":_tvp, "_p": _p, "_v":_v}
         self._meas_fun = Function('meas_fun',
-                                  [v for v in v_in_meas.values()], [self._y_expression],
-                                  [k for k in v_in_meas.keys()], ["_y_expression"])
-        self._rhs_jac_fun = Function('rhs_jac_fun',
-                                 [v for v in v_in_meas.values()], [jacobian(self._y_expression, v) for v in v_in_meas.values()],
-                                 [k for k in v_in_rhs.keys()], [k for k in v_in_meas.keys()])    
+                                  [v for v in v_in_meas.values()], 
+                                  [self._y_expression],
+                                  [k for k in v_in_meas.keys()], 
+                                  ["_y_expression"])
+        self._meas_jac_fun = Function('meas_jac_fun',
+                                 [v for v in v_in_meas.values()], 
+                                 [jacobian(self._y_expression, v) for v in v_in_meas.values()],
+                                 [k for k in v_in_meas.keys()], 
+                                 [k for k in v_in_meas.keys()])    
         
 
         # Create and store some information about the model regarding number of variables for
