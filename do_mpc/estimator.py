@@ -77,7 +77,7 @@ class EKF(Estimator):
     .. warning::
         Not currently implemented.
     """
-    def __init__(self, model):
+    def __init__(self, model, p_est_list = []):
         super().__init__(model)
         # Flags are checked when calling .setup.
         self.flags = {
@@ -85,9 +85,14 @@ class EKF(Estimator):
         }
         
         # Initialize structure to hold the optimial solution and initial guess:
-        self._opt_x_num = None
+        # TODO: continue here!
+        self._opt_x_num = model.sv
         # Initialize structure to hold the parameters for the optimization problem:
         self._opt_p_num = None
+        # Initialize structures to hold the covariance matrices
+        self._R_num = None
+        self._Q = None
+        self._P = None
         
         self.data_fields = [""]
         self.prediction_type = "simple" # simple | 
@@ -105,9 +110,7 @@ class EKF(Estimator):
             [entry(p_i, shape=_p[p_i].shape) for p_i in _p.keys() if p_i not in p_est_list]
         )        
         
-        self._R = None
-        self._Q = None
-        self._P = None
+
         
 
     def make_step(self, y0):
