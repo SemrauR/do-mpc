@@ -962,13 +962,12 @@ class Model:
 
         # Create a new process noise variable and add it to the rhs equation.
         if process_noise:
-            if self.symvar_type == 'MX':
-                var = MX.sym(var_name+'_noise', expr.shape[0])
-            else:
-                var = SX.sym(var_name+'_noise', expr.shape[0])
-
-            self._w.append(var)
+            var = self.sv.sym(var_name+'_noise', expr.shape[0])
+            
+            self._w['name'].append(var_name)
+            self._w['var'].append(var)
             expr += var
+
         self.rhs_list.extend([{'var_name': var_name, 'expr': expr}])
 
     def set_alg(self, expr_name, expr):
