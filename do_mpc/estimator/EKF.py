@@ -44,7 +44,7 @@ class EKF(Estimator):
         self.flags = {
             'setup': False,
         }
-        
+        # FUCJ THSI SHTIT
         # Initialize structure to hold the optimial solution and initial guess:
         self._opt_x_num = None
         # Initialize structure to hold the parameters for the optimization problem:
