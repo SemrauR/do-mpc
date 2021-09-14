@@ -38,7 +38,7 @@ class EKF(Estimator):
     .. warning::
         Not currently implemented.
     """
-    def __init__(self, model):
+    def __init__(self, model, p_est_list):
         super().__init__(model)
         # Flags are checked when calling .setup.
         self.flags = {
@@ -50,7 +50,11 @@ class EKF(Estimator):
         # Initialize structure to hold the parameters for the optimization problem:
         self._opt_p_num = None
         
-        self.data_fields = [""]
+        self._opt_R_struct = None
+        self._opt_Q_struct = None
+        self._opt_P_struct = None
+        
+        self.data_fields = ["prediction_type", "correction_type", "constraint_handling_type"]
         self.prediction_type = "simple" # simple | 
         self.correction_type = "simple" # simple | 
         self.constraint_handling_type = "none" # none | simple | QP | NLP
@@ -65,10 +69,6 @@ class EKF(Estimator):
         self._p_set  = self.model.sv.sym_struct(
             [entry(p_i, shape=_p[p_i].shape) for p_i in _p.keys() if p_i not in p_est_list]
         )        
-        
-        self._R = None
-        self._Q = None
-        self._P = None
         
 
     def make_step(self, y0):
