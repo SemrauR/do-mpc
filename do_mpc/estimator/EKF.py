@@ -114,20 +114,27 @@ class EKF(Estimator):
         
         return
         
-    def simple_cont_EKF(self):
-        "C=del h(x,u,p,tv_p)/ del x,p_est"
-        C=calculte_C_fun # Jacobian of the measurement function regarding to the 
+    def make_simple_EKF_prediction(self):
         " Prediction "
-        xp_scaled=self.integrator(x0=x0_scaled , p = vertcat(u_scaled,p,tv_p))['xf']
-       
-        self.A=expm(jacobian_x_p*timestep)
-        self.P_p=((self.A@self.P)@self.A.T)+self.QP
+        x_pre=integrator(x0=x0 , p = vertcat(u,p,tv_p))['xf']
+        #### Calculate the Jacobian  ###
+        jacobian_of_rhs_wrt_x=self.model._rhs_jac_fun(x0,)
+        ####
+        A=slin.expm(jacobian_x_p*self.dt) ##
+        P_pre=((A@P_post)@A.T)+QP ## Prediction of the 
         
-    def simple_cont_EKF(self):     
+    def make_simple_EKF_correction(self):     
         " Correction "
-        self.S=(self.C_Matrix@self.P_p@self.C_Matrix.T)+self.R
-        self.K=(self.P_p@self.C_Matrix.T)@inv(self.S)#<- Kalman gain
-        self.yp_scaled=self.h(self.xp_scaled,vertcat(self.u_scaled,p,tv_p))
-        self.y=self.yp_scaled*self.y_scaling
-        self.xc_scaled=self.xp_scaled+self.K@(self.y_scaled-self.yp_scaled)
-        self.P=(NP.eye(self.number_states)-(self.K@self.C_Matrix))@self.P_p
+        "H=del h(x,u,p,tv_p)/ del x,p_est"
+        H= # Jacobian of the measurement function regarding to the predicted states
+        S=(C@P_pre@C.T)+R 
+        K=(P_pre@C.T)@slin.inv(S)#Calculation of the Kalman Gain 
+        ###
+        y_pre=h(x_pre,vertcat(u,p,tv_p))# Measurement after the prediction
+        ## Correction of the P-Matrix
+        x_post=x_pre+K@(y-yp)
+        ## Correction of the P-Matrix
+        I=DM.eye(P_pre.shape[0])# 
+        P_post=(I-(K@H))@P_pre@(I-(K@H)).T+K@R@K.T#    
+        y_post=h(x_post,vertcat(u,p,tv_p))# Measurement after the correction
+        return 
