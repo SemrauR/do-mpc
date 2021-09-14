@@ -146,7 +146,7 @@ class MHE(do_mpc.optimizer.Optimizer, Estimator):
             [entry(p_i, shape=_p[p_i].shape) for p_i in _p.keys() if p_i not in p_est_list]
         )
 
-        # Enable to "unite" _p_est and _p_set to _p
+        # Enable to merge _p_est and _p_set into _p
         p_cat = vertcat(_p)
         _p_subs = []
         for name in _p.keys():

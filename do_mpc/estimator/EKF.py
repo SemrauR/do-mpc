@@ -59,7 +59,6 @@ class EKF(Estimator):
         self.correction_type = "simple" # simple | 
         self.constraint_handling_type = "none" # none | simple | QP | NLP
         
-        # TODO check validity of the p_est_list names
         # Create seperate structs for the estimated and the set parameters (the union of both are all parameters of the model.)
         _p = model._p
         self._p_est  = self.model.sv.sym_struct(
@@ -69,11 +68,19 @@ class EKF(Estimator):
         self._p_set  = self.model.sv.sym_struct(
             [entry(p_i, shape=_p[p_i].shape) for p_i in _p.keys() if p_i not in p_est_list]
         )
-        self._split_p = Function("split_p", [_p],
-                                 [vertcat(*[reshape(_p[p_i],-1,1) for p_i in _p.keys() if p_i in p_est_list]),
-                                  vertcat(*[reshape(_p[p_i],-1,1) for p_i in _p.keys() if p_i not in p_est_list])
-                                 ])
-        
+        # Construction of the permutation matrices 
+        # The permutation matrices work as follows:
+            # p_est = _p_perm_p_est @ p (extract the vector of estimated parameters from the full vector of parameters)
+            # p_set = _p_perm_p_set @ p (extract the vector of set parameters from the full vector of parameters)
+            # p = _p_perm_p_est.T @ p_est + _p_perm_p_set.T @ p_set (merge the vectors of estimated and set parameters into the full vector of parameters)
+        # The vectors can be appropriately "structured" by passing them as an argument to the corresponding structure
+        # i.e.: model._p(p) -> Returns a structure of parameters that can be indexed by parameter name
+        # i.e.: self._p_est(p_est) -> Returns a structure of estimated parameters that can be indexed by parameter name
+            
+        self._p_perm_p_est = DM(jacobian(self._p_est(vertcat(*[reshape(_p[p_i],-1,1) for p_i in _p.keys() if p_i in p_est_list])),
+                                         _p).sparsity())
+        self._p_perm_p_set = DM(jacobian(self._p_set(vertcat(*[reshape(_p[p_i],-1,1) for p_i in _p.keys() if p_i not in p_est_list])),
+                                         _p).sparsity())
         
 
     def make_step(self, y0):
