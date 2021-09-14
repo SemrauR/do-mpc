@@ -141,6 +141,7 @@ class EKF(Estimator):
         self._Q_num = model.sv.struct([entry("Q", shapestruct = (model._w, model._w))])(0)
         self._P_num = model.sv.struct([entry("P", shapestruct = (model._w,self._p_est, model._w))])(0)
         
+        
     def make_step(self, y0):
         """Main method during runtime. Pass the most recent measurement and
         retrieve the estimated state."""
@@ -155,22 +156,27 @@ class EKF(Estimator):
         
     
     def _setup_prediction_function(self):
+        if self.prediction_type='simple':
+            self.make_prediction = self._setup_simple_EKF_prediction()
         return 
     
     
     def _setup_correction_function(self):
+        if 
+            self.make_correction = self._setup_simple_EKF_correction()
         return
     
     
     def _setup_constraint_handling_function(self):
+        self.make_constraint_handling =
         return
     
     
     def setup():
+        self._setup_nominal_values()
         self._setup_prediction_function()
         self._setup_correction_function()
         self._setup_constraint_handling_function()
-        
         return
     
     def _setup_nominal_values(self):
@@ -199,6 +205,7 @@ class EKF(Estimator):
         #####
         self.jacobian_of_h_for_estimation = Function('Jacobian_of_h_to_x_p_est',[self.x,self.z,simp],[jacobian(self.model._y_expression,self.x_estimated)])
         ####
+        self.h# Measurement Function
         
     def _setup_simple_EKF_prediction(self):
         #### Integrator ####
@@ -231,3 +238,9 @@ class EKF(Estimator):
         self._P_num=(I-(K@H))@P_pre@(I-(K@H)).T+K@R@K.T#    
         y_post=h(self._x_num,z_pre,self.simp)          # Measurement after the correction
          
+    def make_none_constraint_handling(self):
+        " Not Doing anythig " 
+        
+        
+        
+        
