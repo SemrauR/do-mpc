@@ -71,7 +71,6 @@ class EKF(Estimator):
         self.flags = {
             'setup': False,
         }
-<<<<<<< HEAD
         # Initialize structure to hold the optimial solution and initial guess:
         self._opt_x_num = None
         # Initialize structure to hold the parameters for the optimization problem:
@@ -80,8 +79,7 @@ class EKF(Estimator):
         self._opt_R_struct = None
         self._opt_Q_struct = None
         self._opt_P_struct = None
-=======
->>>>>>> 364922dbe5460f0b367c2718c2fdec5b694b40a4
+
         
         self.data_fields = ["prediction_type", "correction_type", "constraint_handling_type"]
         self.prediction_type = "simple" # simple | 
@@ -169,21 +167,20 @@ class EKF(Estimator):
         
         return
     
-    def _setup_simple_EKF_prediction(self):
-        ## Initialize DAE integrator ##
+    def _setup_nominal_values(self):
         self.sim_p =sim_p= self.model.sv.sym_struct([
             entry('_u', struct=self.model._u),
             entry('_p', struct=self.model._p),
             entry('_tvp', struct=self.model._tvp),
             entry('_w', struct=self.model._w)])
-        dae['x']=self.model._x
-        dae['z']=self.model._z
-        dae['p']=sim_p
-        dae['ode']=self.model._alg
-        dae['alg']=self.model._rhs
-        ### Initialize ##
-        self.sim_p=self.sim_p(0)
-        #####
+        self.sim_p_num =self.sim_p(0)
+        #### INIT DAE ###
+        self.dae['x']=self.model._x
+        self.dae['z']=self.model._z
+        self.dae['p']=sim_p
+        self.dae['ode']=self.model._alg
+        self.dae['alg']=self.model._rhs
+        ####
         self.x_estimated=vertcat(self.model._x,self.split_p(self.model._p)[0])
         #####
         self.get_estimated_states=Function('',[self.model._x,self.model._p],[self.x_estimated])
@@ -196,6 +193,9 @@ class EKF(Estimator):
         #####
         self.jacobian_of_h_for_estimation = Function('Jacobian_of_h_to_x_p_est',[self.x,self.z,simp],[jacobian(self.model._y_expression,self.x_estimated)])
         ####
+        
+    def _setup_simple_EKF_prediction(self):
+        #### Integrator ####
         self.integrator=integrator('F', 'idas', dae,{'tf':self.dt})
         return self.simple_EKF_prediction
     
@@ -206,13 +206,11 @@ class EKF(Estimator):
         " Prediction "
         #### Calculate the Jacobian  ###
         jacobian_x_p=self.jacobian_of_rhs_for_estimation_x_est(self._x_num,self._z_num,simp)
-        ####
+        ####    ####
         A=slin.expm(jacobian_x_p*self.dt) ##
         self.P_pre=((A@self._P_num)@A.T)+QP ## Prediction of the 
         self._x_num=integrator(x0=self._x_num ,z0=self._z_num, p = simp)['xf']
-        ####
-        
-        
+        ####    ####
         
     def make_simple_EKF_correction(self):     
         " Correction "
@@ -223,7 +221,7 @@ class EKF(Estimator):
         ## Correction of the P-Matrix
         self._x_num=self._x_num+K@(self._y_num-self.h(self._x_num,self._z_num,simp))
         ## Correction of the P-Matrix
-        I=DM.eye(self._P_num.shape[0])# 
+        I=DM.eye(self._P_num.shape[0])                 # 
         self._P_num=(I-(K@H))@P_pre@(I-(K@H)).T+K@R@K.T#    
-        y_post=h(self._x_num,z_pre,self.simp)# Measurement after the correction
+        y_post=h(self._x_num,z_pre,self.simp)          # Measurement after the correction
          
