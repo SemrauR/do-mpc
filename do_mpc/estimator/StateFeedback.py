@@ -20,11 +20,29 @@
 #   You should have received a copy of the GNU General Public License
 #   along with do-mpc.  If not, see <http://www.gnu.org/licenses/>.
 
+import numpy as np
+from casadi import *
+from casadi.tools import *
+import pdb
+import copy
+import warnings
+import time
 
-from .EKF import *
-from .estimator import *
-from .MHE import *
-from .StateFeedback import *
+import do_mpc.optimizer
+import do_mpc.data
+from do_mpc.estimator.estimator import Estimator 
 
 
+class StateFeedback(Estimator):
+    """Simple state-feedback "estimator".
+    The main method :py:func:`StateFeedback.make_step` simply returns the input.
+    Why do you even bother to use this class?
+    """
+    def __init__(self, model):
+        super().__init__(model)
+
+    def make_step(self, y0):
+        """Return the measurement ``y0``.
+        """
+        return y0
 
