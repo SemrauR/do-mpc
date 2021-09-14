@@ -145,7 +145,13 @@ class EKF(Estimator):
         """Main method during runtime. Pass the most recent measurement and
         retrieve the estimated state."""
         assert self.flags['setup'] == True, 'EKF was not setup yet. Please call EKF.setup().'
-        None
+        ########## Get Values ##########
+        # Get u,p,tvp merged into the simp
+        # Get x,z, and p merged into x_est and p
+        ################################
+        self.make_prediction()
+        self.make_correction()
+        self.make_constraint_handling()
         
     
     def _setup_prediction_function(self):
