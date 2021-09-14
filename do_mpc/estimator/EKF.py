@@ -29,7 +29,7 @@ import warnings
 import time
 import do_mpc.optimizer
 import do_mpc.data
-from do_mpc.estimator.estimator import Estimator 
+from do_mpc.estimator import Estimator 
 
 class EKF(Estimator):
     """Extended Kalman Filter. Setup this class and use :py:func:`EKF.make_step`
