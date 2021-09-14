@@ -97,4 +97,20 @@ class EKF(Estimator):
         
         return
         
-    
+    def simple_cont_EKF(self):
+        "C=del h(x,u,p,tv_p)/ del x,p_est"
+        C=calculte_C_fun # Jacobian of the measurement function regarding to the 
+        " Prediction "
+        xp_scaled=self.integrator(x0=x0_scaled , p = vertcat(u_scaled,p,tv_p))['xf']
+       
+        self.A=expm(jacobian_x_p*timestep)
+        self.P_p=((self.A@self.P)@self.A.T)+self.QP
+        
+    def simple_cont_EKF(self):     
+        " Correction "
+        self.S=(self.C_Matrix@self.P_p@self.C_Matrix.T)+self.R
+        self.K=(self.P_p@self.C_Matrix.T)@inv(self.S)#<- Kalman gain
+        self.yp_scaled=self.h(self.xp_scaled,vertcat(self.u_scaled,p,tv_p))
+        self.y=self.yp_scaled*self.y_scaling
+        self.xc_scaled=self.xp_scaled+self.K@(self.y_scaled-self.yp_scaled)
+        self.P=(NP.eye(self.number_states)-(self.K@self.C_Matrix))@self.P_p
