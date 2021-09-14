@@ -219,9 +219,15 @@ class EKF(Estimator):
         " Prediction "
         #### Calculate the Jacobian  ###
         jacobian_x_p=self.jacobian_of_rhs_for_estimation_x_est(self._x_num,self._z_num,simp)
-        ####    ####
-        A=slin.expm(jacobian_x_p*self.dt) ##
-        self.P_pre=((A@self._P_num)@A.T)+QP ## Prediction of the 
+        jacobian_f_p_w=jacobian_of_rhs_for_estimation_w_p(self._x_num,self._z_num,simp)
+        #### From cont to discrete   ####
+        F=slin.expm(jacobian_x_p*self.dt) ##
+        A=jacobian_x_p
+        Q_cont=jacobian_f_p_w@self._num_Q@jacobian_f_p_w.T
+        G=slin.expm(vertcat(horzcat(-A.T,A*0),horzcat(Q_cont,A))*self.dt)
+        QP=G[0:Q_cont.shape[0],Q_cont.shape[0]:]
+        ####
+        self.P_pre=((F@self._P_num)@F.T)+QP ## Prediction of the 
         self._x_num=integrator(x0=self._x_num ,z0=self._z_num, p = simp)['xf']
         ####    ####
         
