@@ -126,6 +126,7 @@ class EKF(Estimator):
     def make_simple_EKF_correction(self):     
         " Correction "
         "H=del h(x,u,p,tv_p)/ del x,p_est"
+        print('Dere')
         H= # Jacobian of the measurement function regarding to the predicted states
         S=(C@P_pre@C.T)+R 
         K=(P_pre@C.T)@slin.inv(S)#Calculation of the Kalman Gain 
