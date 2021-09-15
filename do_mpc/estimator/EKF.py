@@ -152,7 +152,9 @@ class EKF(Estimator):
         ########## Get Values ##########
         # Get u,p,tvp merged into the simp
         # Get x,z, and p merged into x_est and p
-        ################################
+        ################################        
+        self.data.update(_y = y0)
+        self.get_current_p_u_tv_p()
         self.make_prediction()
         self.make_correction()
         self.make_constraint_handling()
@@ -179,8 +181,8 @@ class EKF(Estimator):
         self._setup_prediction_function()
         self._setup_correction_function()
         self._setup_constraint_handling_function()
-        return
-    
+        self.flags['setup']=True 
+        
     def _setup_nominal_values(self):
         self.sim_p = sim_p= self.model.sv.sym_struct([
             entry('_u', struct=self.model._u),
@@ -236,7 +238,7 @@ class EKF(Estimator):
         
     def _setup_simple_prediction(self):
         #### Integrator ####
-        self.integrator=integrator('F', 'idas', dae,{'tf':self.dt/self.number_integration})
+        self.integrator=integrator('F', 'idas',dae,{'tf':self.dt/self.number_integration})
         return self.make_simple_prediction
     
     def make_simple_prediction(self):
@@ -273,14 +275,20 @@ class EKF(Estimator):
         ## Correction of the P-Matrix
         I=DM.eye(self._P_num.shape[0])                 # 
         self._P_num=(I-(K@H))@self._P_num@(I-(K@H)).T+K@self._R@K.T#    
-        y_post=h(self._x_num,z_pre,self.simp_num)          # Measurement after the correction
-     
+        y_post=h(self._x_num,z_pre,self.simp_num)# Measurement after the correction
+    
     def _setup_none_constraint_handling(self):
         return self.make_none_constraint_handling
     
     def make_none_constraint_handling(self):
         " Not Doing anythig " 
     
+    def _get_current_p_u_tv_p(self):
+        self.sim_p_num['_tv_p']=self.tvp_fun(self._t0)
+        self.sim_p_num['_p']=self.p_fun(self._t0)
+        
+    
+        
     # def _setup_NLP_constraint_handling(self):
     #     x=self.model.sv.sym_struct([entry('_x', struct=self.model._x),entry('_z', struct=self.model._z)])
     #     x0=self.x_est
