@@ -149,22 +149,21 @@ class EKF(Estimator):
         self.make_prediction()
         self.make_correction()
         self.make_constraint_handling()
-        
+        return self._x_num
     
     def _setup_prediction_function(self):
-        if self.prediction_type='simple':
-            self.make_prediction = self._setup_simple_EKF_prediction()
+        if self.prediction_type=='simple':
+            self.make_prediction = self._setup_simple_prediction()
         return 
     
-    
     def _setup_correction_function(self):
-        if 
-            self.make_correction = self._setup_simple_EKF_correction()
+        if self.correction_type=='simple':
+            self.make_correction = self._setup_simple_correction()
         return
     
-    
     def _setup_constraint_handling_function(self):
-        self.make_constraint_handling =
+        if self.correction_type == 'None':
+            self.make_constraint_handling=self._setup_none_constraint_handling()
         return
     
     
@@ -197,37 +196,35 @@ class EKF(Estimator):
         #####  
         self.jacobian_of_rhs_for_estimation_x_est=Function('Jacobian_of_rhs_to_x_p_est',[self.x,self.z,simp],[jacobian(self.rhs_estimated,self.x_estimated)])
         #####
-        self.jacobian_of_rhs_for_estimation_w_p  =Function('jacobian_of_rhs_for_estimation_w_p',[self.x,self.z,simp],[jacobian(self.rhs_estimated,vertcat(self.model._w,self.model._p))])
-        #####
         self.jacobian_of_h_for_estimation = Function('Jacobian_of_h_to_x_p_est',[self.x,self.z,simp],[jacobian(self.model._y_expression,self.x_estimated)])
         ####
         self.h# Measurement Function
         
-    def _setup_simple_EKF_prediction(self):
+    def _setup_simple_prediction(self):
         #### Integrator ####
-        self.integrator=integrator('F', 'idas', dae,{'tf':self.dt})
-        return self.simple_EKF_prediction
+        self.integrator=integrator('F', 'idas', dae,{'tf':self.dt/self.number_integration})
+        return self.make_simple_prediction
     
-    def _setup_simple_EKF_correction(self):
-        return self.simple_EKF_correction
-    
-    def make_simple_EKF_prediction(self,simp):
+    def make_simple_prediction(self,simp):
         " Prediction "
-        #### Calculate the Jacobian  ###
-        jacobian_x_p=self.jacobian_of_rhs_for_estimation_x_est(self._x_num,self._z_num,simp)
-        jacobian_f_p_w=jacobian_of_rhs_for_estimation_w_p(self._x_num,self._z_num,simp)
-        #### From cont to discrete   ####
-        F=slin.expm(jacobian_x_p*self.dt) ##
-        A=jacobian_x_p
-        Q_cont=jacobian_f_p_w@self._num_Q@jacobian_f_p_w.T
-        G=slin.expm(vertcat(horzcat(-A.T,A*0),horzcat(Q_cont,A))*self.dt)
-        QP=G[0:Q_cont.shape[0],Q_cont.shape[0]:]
-        ####
-        self.P_pre=((F@self._P_num)@F.T)+QP ## Prediction of the 
-        self._x_num=integrator(x0=self._x_num ,z0=self._z_num, p = simp)['xf']
-        ####    ####
-        
-    def make_simple_EKF_correction(self):     
+        for i in range(self.number_integration):
+            #### Calculate the Jacobian  ###
+            jacobian_x_p=self.jacobian_of_rhs_for_estimation_x_est(self._x_num,simp)
+            #### From cont to discrete   ####
+            F=slin.expm(jacobian_x_p*self.dt/self.number_integration) ##
+            A=jacobian_x_p
+            Q_cont=jacobian_f_p_w@self._num_Q@jacobian_f_p_w.T
+            G=slin.expm(vertcat(horzcat(-A.T,A*0),horzcat(Q_cont,A))*self.dt/self.number_integration)
+            QP=G[0:Q_cont.shape[0],Q_cont.shape[0]:]
+            ####
+            self.P_num=((F@self._P_num)@F.T)+QP ## Prediction of the 
+            self._x_num=integrator(x0=self._x_num ,z0=self._z_num, p = simp)['xf']
+            ####    ####
+    
+    def _setup_simple_correction(self):
+        return self.make_simple_EKF_correction
+    
+    def make_simple_correction(self):     
         " Correction "
         C=self.jacobian_of_h_for_estimation(self._x_num,self._z_num,self.simp) # Jacobian of the measurement function regarding to the predicted states
         S=(C@self._P_num@C.T)+R 
@@ -239,10 +236,13 @@ class EKF(Estimator):
         I=DM.eye(self._P_num.shape[0])                 # 
         self._P_num=(I-(K@H))@P_pre@(I-(K@H)).T+K@R@K.T#    
         y_post=h(self._x_num,z_pre,self.simp)          # Measurement after the correction
-         
+     
+    def _setup_none_constraint_handling(self):
+        return self.make_none_constraint_handling
+    
     def make_none_constraint_handling(self):
         " Not Doing anythig " 
-        
-        
-        
+    
+    def _setup_QP_constraint_handling(self):
+        if
         
