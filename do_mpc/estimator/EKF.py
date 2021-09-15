@@ -233,16 +233,16 @@ class EKF(Estimator):
     
     def make_simple_correction(self):     
         " Correction "
-        C=self.jacobian_of_h_for_estimation(self._x_num,self._z_num,self.simp) # Jacobian of the measurement function regarding to the predicted states
-        S=(C@self._P_num@C.T)+R 
+        C=self.jacobian_of_h_for_estimation(self._x_num,self.simp_num) # Jacobian of the measurement function regarding to the predicted states
+        S=(C@self._P_num@C.T)+self._R 
         K=(self._P_num@C.T)@slin.inv(S)#Calculation of the Kalman Gain 
         ###
         ## Correction of the P-Matrix
-        self._x_num=self._x_num+K@(self._y_num-self.h(self._x_num,self._z_num,simp))
+        self._x_num=self._x_num+K@(self._y_num-self.h(self._x_est_num,self.simp_num))
         ## Correction of the P-Matrix
         I=DM.eye(self._P_num.shape[0])                 # 
-        self._P_num=(I-(K@H))@P_pre@(I-(K@H)).T+K@R@K.T#    
-        y_post=h(self._x_num,z_pre,self.simp)          # Measurement after the correction
+        self._P_num=(I-(K@H))@self._P_num@(I-(K@H)).T+K@self._R@K.T#    
+        y_post=h(self._x_num,z_pre,self.simp_num)          # Measurement after the correction
      
     def _setup_none_constraint_handling(self):
         return self.make_none_constraint_handling
@@ -250,13 +250,17 @@ class EKF(Estimator):
     def make_none_constraint_handling(self):
         " Not Doing anythig " 
     
-    def _setup_QP_constraint_handling(self):
+    # def _setup_NLP_constraint_handling(self):
+    #     x=self.model.sv.sym_struct([entry('_x', struct=self.model._x),entry('_z', struct=self.model._z)])
+    #     x0=self.x_est
+    #     p=self.model.sv.sym_struct([entry('_x', struct=self.model._x),entry('_z', struct=self.model._z)])
+    #     NLP={'x':x,'f':(self.x_est-x).cat@P@(self.x_est-x).cat,'p':}
+    #     solver=nlpsol('ipopt',NLP)
+    #     return self.make_QP_constraint_handling
         
-        return self.make_QP_constraint_handling
+    # def make_NLP_constraint_handling(self):
+    #     self.constr = conic('S','qpoases',qp,opt);
+     
+    # def check_if_constraints_are_violated():
         
-    def make_QP_constraint_handling(self):
-        
-        
-    def check_if_constraints_are_violated():
-        
-        return 
+    #     return 
