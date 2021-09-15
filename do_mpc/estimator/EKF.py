@@ -208,20 +208,24 @@ class EKF(Estimator):
         self.integrator=integrator('F', 'idas', dae,{'tf':self.dt/self.number_integration})
         return self.make_simple_prediction
     
-    def make_simple_prediction(self,simp):
+    def make_simple_prediction(self):
         " Prediction "
         for i in range(self.number_integration):
             #### Calculate the Jacobian  ###
-            jacobian_x_p=self.jacobian_of_rhs_for_estimation_x_est(self._x_num,simp)
-            #### From cont to discrete   ####
-            F=slin.expm(jacobian_x_p*self.dt/self.number_integration) ##
-            A=jacobian_x_p
-            Q_cont=jacobian_f_p_w@self._num_Q@jacobian_f_p_w.T
-            G=slin.expm(vertcat(horzcat(-A.T,A*0),horzcat(Q_cont,A))*self.dt/self.number_integration)
-            QP=G[0:Q_cont.shape[0],Q_cont.shape[0]:]
-            ####
+            A=self.rhs_jac_x_est(self._x_est_num,self.simp_num)
+            dfdw=self.rhs_jac_w(self._x_est_num,self.simp_num)
+            ## Make cont to discrete integration of A and Q_cont ##
+            Q_full=dfdw@self._Q@dfdw.T
+            M=slin.expm(vertcat(horzcat(-A.T,A*0),horzcat(self._Q,A))*self.dt/self.number_integration)
+            F=M[Q_cont.shape[0]:,self._Q.shape[0]:]
+            G=M[:Q_cont.shape[0],Q_cont.shape[0]:]
+            QP=F.T@G
+            ## Reference: Van Loan, „Computing Integrals Involving the Matrix Exponential“.
+            ####    ####
             self.P_num=((F@self._P_num)@F.T)+QP ## Prediction of the 
-            self._x_num=integrator(x0=self._x_num ,z0=self._z_num, p = simp)['xf']
+            solution=self.integrator(x0=self._x_est_num['_x'] ,z0=self._x_est_num['_z'], p = self.simp_num)
+            self._x_est_num['_x']=solution['xf']
+            self._x_est_num['_z']=solution['zf']
             ####    ####
     
     def _setup_simple_correction(self):
@@ -247,5 +251,12 @@ class EKF(Estimator):
         " Not Doing anythig " 
     
     def _setup_QP_constraint_handling(self):
-        if
         
+        return self.make_QP_constraint_handling
+        
+    def make_QP_constraint_handling(self):
+        
+        
+    def check_if_constraints_are_violated():
+        
+        return 
