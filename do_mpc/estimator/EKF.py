@@ -72,10 +72,11 @@ class EKF(Estimator):
             'setup': False,
         }
 
-        self.data_fields = ["prediction_type", "correction_type", "constraint_handling_type"]
+        self.data_fields = ["prediction_type", "correction_type", "constraint_handling_type", "dt", "tvp_fun"]
         self.prediction_type = "simple" # simple | 
         self.correction_type = "simple" # simple | 
         self.constraint_handling_type = "none" # none | simple | QP | NLP
+        self.dt = 1
         
         # The full set of parameters is split in estimated and set parameters
         # To extract the estimated parameters multiply the full set by the permutation matrix
@@ -132,11 +133,14 @@ class EKF(Estimator):
         self._x_extended_short = sv.sym_struct([entry("_x", struct = _x),
                                                 entry("_p_est", struct = self._p_est)])
         
+        self._u_extended = sv.sym_struct([entry("_u", struct = self.model._u),
+                                          entry("_p_set", struct = self._p_set),
+                                          entry("_tvp", struct = self._tvp_set)])
+        
         # R and Q are the covariance matrices for the white noise gaussian processes of vectors v and [w; p_est]
         # The error covariance matrix P is 
         self._R = model.sv.struct([entry("v", shapestruct = (model._v, model._v))])
-        self._Q = model.sv.struct([entry("w", shapestruct = (model._w, model._w)),
-                                       entry("p_est", shapestruct = (self._p_est, self._p_est))])
+        self._Q = model.sv.struct([entry("Q", shapestruct = (self._x_extended, ))])
         self._P = model.sv.struct([entry("P", shapestruct = (self._x_extended, self._x_extended))])
         self._P_short = model.sv.struct([entry("P", shapestruct = (self._x_extended_short, self._x_extended_short))])
         
@@ -198,12 +202,39 @@ class EKF(Estimator):
         #####
         self.rhs_estimated=get_estimated_states(self.rhs,self.model._p*0)
         #####  
-        self.jacobian_of_rhs_for_estimation_x_est=Function('Jacobian_of_rhs_to_x_p_est',[self.x,self.z,simp],[jacobian(self.rhs_estimated,self.x_estimated)])
+        
+        p = self._merge_p(p_est = self._p_est, p_set = self._u_extended["_p_set"])
+        rhs_kwargs = {"_x": self.x, "_z": self._z, "_p" : p,
+                      "_u": self._u_extended["_u"], "_tvp": self._u_extended["_tvp"],
+                      "_w": 0}
+        rhs_dict = self.model._rhs_fun(**rhs_kwargs)
+        rhs_jac_dict = self.model._rhs_jac_fun(**rhs_kwargs)
+        alg_dict = self.model._alg_fun(**rhs_kwargs)
+        alg_jac_dict = self.model._alg_jac_fun(**rhs_kwargs)
+        meas_kwargs = {"_x": self.x, "_z": self._z, "_p" : p,
+                      "_u": self._u_extended["_u"], "_tvp": self._u_extended["_tvp"],
+                      "_v": 0}        
+        meas_dict = self.model._meas_fun(**meas_kwargs)
+        meas_jac_dict = self.model._meas_jac_fun(**meas_kwargs)
+        
+        # TODO continue here. The functions will probably throw an error due to output not existing (it's a dict )
+        self.jac_rhs_ext_fun = Function("Jacobian_of_rhs_to_x_ext", [self._x_extended, self._u_extended], [rhs_jac], ["_x_extended", "_u_extended"], ["_jacobian"])
+        self.jac_alg_ext_fun = Function("Jacobian_of_alg_to_x_ext", [self._x_extended, self._u_extended], [alg_jac], ["_x_extended", "_u_extended"], ["_jacobian"])
+        self.jac_meas_ext_fun = Function("Jacobian_of_meas_to_x_ext", [self._x_extended, self._u_extended], [meas_jac], ["_x_extended", "_u_extended"], ["_jacobian"])        
+        
+        rhs_z = -mldivide(alg_jac_dict["_z"], alg_jac_dict["_x"]@rhs_dict["_rhs"])
+        rhs_z_jac = jacobian(rhs_z, self._x_extended)
+        rhs_p_est_jac = zeros(self._p_est.shape[0],self._x_extended.shape[0])
+        #A_ext = vertcat() 
+        #C_ext = 
+        
+        self.jac_rhs_=Function('Jacobian_of_rhs_to_x_p_est',[self.x,self.z,simp],[jacobian(self.rhs_estimated,self.x_estimated)])
         #####
         self.jacobian_of_rhs_for_estimation_w_p  =Function('jacobian_of_rhs_for_estimation_w_p',[self.x,self.z,simp],[jacobian(self.rhs_estimated,vertcat(self.model._w,self.model._p))])
         #####
-        self.jacobian_of_h_for_estimation = Function('Jacobian_of_h_to_x_p_est',[self.x,self.z,simp],[jacobian(self.model._y_expression,self.x_estimated)])
+        self.jacobian_of_h_for_estimation = Function('Jacobian_of_h_to_x_p_est',[self.x,self.z,sim_p],[jacobian(self.model._y_expression,self.x_estimated)])
         ####
+        
         self.h# Measurement Function
         
     def _setup_simple_EKF_prediction(self):
