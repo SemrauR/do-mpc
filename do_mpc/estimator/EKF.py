@@ -125,16 +125,17 @@ class EKF(Estimator):
         # i.e.: model._p(p) -> Returns a structure of parameters that can be indexed by parameter name
         # i.e.: self._p_est(p_est) -> Returns a structure of estimated parameters that can be indexed by parameter name
         
-        
-        # Initialize structure to hold the current estimate of the state
-        self._x_extended = model._x(0)
+        # Initialize structure to hold the extended state (state variables, algebraict states and estimated parameters)
+        self._x_extended = sv.sym_struct([entry("x", struct = _x),
+                                          entry("z", struct = _z),
+                                          entry("p_est", struct = self._p_est)])
         
         # R and Q are the covariance matrices for the white noise gaussian processes of vectors v and [w; p_est]
         # The error covariance matrix P is 
-        self._R_num = model.sv.struct([entry("v", shapestruct = (model._v, model._v))])(0)
+        self._R_num = model.sv.struct([entry("v", shapestruct = (model._v, model._v))])
         self._Q_num = model.sv.struct([entry("w", shapestruct = (model._w, model._w)),
-                                       entry("p_est", shapestruct = (self._p_est, self._p_est))])(0)
-        self._P_num = model.sv.struct([entry("P", shapestruct = (model._w,self._p_est, model._w))])(0)
+                                       entry("p_est", shapestruct = (self._p_est, self._p_est))])
+        self._P_num = model.sv.struct([entry("P", shapestruct = (model._w,self._p_est, model._w))])
         
         
     def make_step(self, y0):
