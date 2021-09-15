@@ -71,56 +71,51 @@ class EKF(Estimator):
         self.flags = {
             'setup': False,
         }
-        # Initialize structure to hold the optimial solution and initial guess:
-        self._opt_x_num = None
-        # Initialize structure to hold the parameters for the optimization problem:
-        self._opt_p_num = None
-        
-        self._opt_R_struct = None
-        self._opt_Q_struct = None
-        self._opt_P_struct = None
 
-        
         self.data_fields = ["prediction_type", "correction_type", "constraint_handling_type"]
         self.prediction_type = "simple" # simple | 
         self.correction_type = "simple" # simple | 
         self.constraint_handling_type = "none" # none | simple | QP | NLP
         
-        # Create seperate structs for the estimated and the set parameters (the union of both are all parameters of the model.)
+        # The full set of parameters is split in estimated and set parameters
+        # To extract the estimated parameters multiply the full set by the permutation matrix
+        # example : p_est = self._p_perm_p_est @ p_full
+        # alternatively use the functions self._split_p or self._merge_p
         _p = model._p
-        # Construction of the permutation matrices 
-        # The permutation matrices work as follows:
-            # p_est = _p_perm_p_est @ p (extract the vector of estimated parameters from the full vector of parameters)
-            # p_set = _p_perm_p_set @ p (extract the vector of set parameters from the full vector of parameters)
-            # p = _p_perm_p_est.T @ p_est + _p_perm_p_set.T @ p_set (merge the vectors of estimated and set parameters into the full vector of parameters)
-
-        _p_structs, perm_mat_dict, merge_fun, split_fun = struct_split(
+        sym_structs, perm_mat_dict, merge_fun, split_fun = struct_split(
             _p, model.sv, {"_p_est": [p_i for p_i in _p.keys() if p_i in p_est_list],
                            "_p_set": [p_i for p_i in _p.keys() if p_i not in p_est_list]}, "_p")
-        self._p_est = _p_struct["_p_est"]
-        self._p_set = _p_struct["_p_set"]
+        self._p_est = sym_structs["_p_est"]
+        self._p_set = sym_structs["_p_set"]
         self._split_p = split_fun
         self._merge_p = merge_fun
         self._p_perm_p_est = perm_mat_dict["_p_est"]
         self._p_perm_p_set = perm_mat_dict["_p_set"]
-        
+
+        # The full set of states is split in noisy (process noise w is added) and clean states
+        # To extract the noisy states multiply the full set by the permutation matrix
+        # example : x_noisy = self._s_perm_p_noisy @ x_full
+        # alternatively use the functions self._split_x or self._merge_x
         _x = model._x
-        _x_structs, perm_mat_dict, merge_fun, split_fun = struct_split(
+        sym_structs, perm_mat_dict, merge_fun, split_fun = struct_split(
             _x, model.sv, {"_x_noisy": [p_i for p_i in _x.keys() if p_i in model._w.keys()],
                            "_x_clean": [p_i for p_i in _x.keys() if p_i not in model._w.keys()]}, "_x")
-        self._x_noisy = _p_struct["_x_noisy"]
-        self._x_clean = _p_struct["_x_clean"]
+        self._x_noisy = sym_structs["_x_noisy"]
+        self._x_clean = sym_structs["_x_clean"]
         self._split_x = split_fun
         self._merge_x = merge_fun
         self._x_perm_x_noisy = perm_mat_dict["_x_noisy"]
         self._x_perm_x_clean = perm_mat_dict["_x_clean"]
         
-        _y = model._y
-        _y_structs, perm_mat_dict, merge_fun, split_fun = struct_split(
+        # The full set of measurements is split in noisy (measurement noise v is added) and clean measurements
+        # To extract the noisy states multiply the full set by the permutation matrix
+        # example : x_noisy = self._s_perm_p_noisy @ x_full
+        # alternatively use the functions self._split_x or self._merge_x        _y = model._y
+        sym_structs, perm_mat_dict, merge_fun, split_fun = struct_split(
             _y, model.sv, {"_y_noisy": [p_i for p_i in _y.keys() if p_i in model._v.keys()],
                            "_y_clean": [p_i for p_i in _y.keys() if p_i not in model._v.keys()]}, "_y")
-        self._y_noisy = _p_struct["_y_noisy"]
-        self._y_clean = _p_struct["_y_clean"]
+        self._y_noisy = sym_structs["_y_noisy"]
+        self._y_clean = sym_structs["_y_clean"]
         self._split_y = split_fun
         self._merge_y = merge_fun
         self._y_perm_y_noisy = perm_mat_dict["_y_noisy"]
@@ -130,15 +125,15 @@ class EKF(Estimator):
         # i.e.: model._p(p) -> Returns a structure of parameters that can be indexed by parameter name
         # i.e.: self._p_est(p_est) -> Returns a structure of estimated parameters that can be indexed by parameter name
         
-
         
         # Initialize structure to hold the current estimate of the state
-        self._x_num = model._x(0)
-        # Initialize structure to hold the current estimate of the full parameter set:
-        self._p_num = model._p(0)
+        self._x_extended = model._x(0)
         
-        self._R_num = model.sv.struct([entry("R", shapestruct = (model._v, model._v))])(0)
-        self._Q_num = model.sv.struct([entry("Q", shapestruct = (model._w, model._w))])(0)
+        # R and Q are the covariance matrices for the white noise gaussian processes of vectors v and [w; p_est]
+        # The error covariance matrix P is 
+        self._R_num = model.sv.struct([entry("v", shapestruct = (model._v, model._v))])(0)
+        self._Q_num = model.sv.struct([entry("w", shapestruct = (model._w, model._w)),
+                                       entry("p_est", shapestruct = (self._p_est, self._p_est))])(0)
         self._P_num = model.sv.struct([entry("P", shapestruct = (model._w,self._p_est, model._w))])(0)
         
         
